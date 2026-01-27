@@ -27,4 +27,5 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     @Query("SELECT i.priorityLevel, COUNT(i) FROM Issue i GROUP BY i.priorityLevel")
     List<Object[]> countByPriorityGroup();
 
+    List<Issue> findBySlaBreachedTrue();
 }

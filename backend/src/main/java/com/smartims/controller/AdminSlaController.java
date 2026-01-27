@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/sla")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
 public class AdminSlaController {
 
     private final SlaPolicyRepository slaPolicyRepository;
