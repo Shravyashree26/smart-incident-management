@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 public class OtpRequest {
 
-    @Email
     @NotBlank
+    @Email
     private String email;
 }

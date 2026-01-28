@@ -1,10 +1,7 @@
 package com.smartims.service;
 
 public interface EmailService {
+    void sendEmail(String to, String subject, String body);
 
-    void sendOtpEmail(String email, String otp);
-
-    void sendContactToAdmin(String name, String email, String message);
-
-    void sendContactConfirmationToUser(String email);
+    void sendOtpEmail(String to, String otp);
 }
