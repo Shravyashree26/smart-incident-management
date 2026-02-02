@@ -8,4 +8,8 @@ public interface AuditLogService {
             Long entityId,
             String description
     );
+
+    void logSystem(String action, String details);
+
+    void log(String action, String details);
 }

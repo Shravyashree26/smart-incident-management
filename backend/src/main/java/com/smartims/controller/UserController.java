@@ -5,7 +5,6 @@ import com.smartims.service.UserService;
 import com.smartims.util.ResponseUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,39 +31,70 @@ public class UserController {
 
     // POST - Create user
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
             @RequestBody UserCreateRequest request) {
-        return ResponseEntity.ok(userService.createUser(request));
+        UserResponse response = userService.createUser(request);
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "User created successfully",
+                response
+        );
     }
 
     // GET - All users
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "Users fetched successfully",
+                userService.getAllUsers()
+        );
     }
+
 
     // GET - User by ID
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @PathVariable Long id) {
-        return ResponseEntity.ok(userService.getUserById(id));
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "User fetched successfully",
+                userService.getUserById(id)
+        );
     }
+
 
     // PUT - Update user
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
             @RequestBody UserUpdateRequest request) {
-        return ResponseEntity.ok(userService.updateUser(id, request));
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "User updated successfully",
+                userService.updateUser(id, request)
+        );
     }
+
 
     // DELETE - Delete user
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
             @PathVariable Long id) {
+
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "User deleted successfully",
+                null
+        );
     }
+
 
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<Void>> updateUserStatus(

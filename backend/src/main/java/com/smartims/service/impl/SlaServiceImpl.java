@@ -1,9 +1,15 @@
 package com.smartims.service.impl;
 
+import com.smartims.dto.SlaCreateRequest;
+import com.smartims.dto.SlaResponse;
 import com.smartims.dto.SlaStatusResponse;
 import com.smartims.entity.Issue;
+import com.smartims.entity.Project;
+import com.smartims.entity.SlaPolicy;
 import com.smartims.enums.IssueStatus;
+import com.smartims.mapper.SlaMapper;
 import com.smartims.repository.IssueRepository;
+import com.smartims.repository.ProjectRepository;
 import com.smartims.repository.SlaPolicyRepository;
 import com.smartims.service.AuditLogService;
 import com.smartims.service.NotificationInboxService;
@@ -24,6 +30,32 @@ public class SlaServiceImpl implements SlaService {
     private final IssueRepository issueRepository;
     private final AuditLogService auditLogService;
     private final NotificationInboxService notificationInboxService;
+    private final ProjectRepository projectRepository;
+
+    @Override
+    public SlaResponse createSla(SlaCreateRequest request) {
+
+        if (request.getProjectId() == null) {
+            throw new IllegalArgumentException("Project ID is required");
+        }
+
+        Project project = projectRepository.findById(request.getProjectId())
+                .orElseThrow(() ->
+                        new RuntimeException("Project not found with id: " + request.getProjectId())
+                );
+
+        SlaPolicy slaPolicy = SlaPolicy.builder()
+                .priorityLevel(request.getPriorityLevel())
+                .resolutionTimeMinutes(request.getResolutionTimeMinutes())
+                .description(request.getDescription())
+                .project(project)
+                .build();
+
+        return SlaMapper.toResponse(
+                slaPolicyRepository.save(slaPolicy)
+        );
+    }
+
 
     @Override
     public void applySla(Issue issue) {
@@ -64,6 +96,12 @@ public class SlaServiceImpl implements SlaService {
                                 "SLA breached for issue: " + issue.getTitle(),
                                 issue
                         );
+
+                        auditLogService.logSystem(
+                                "SLA_ESCALATED",
+                                "Issue " + issue.getId() + " escalated due to SLA breach"
+                        );
+
 
 
                         auditLogService.log(

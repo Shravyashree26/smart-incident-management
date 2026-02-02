@@ -9,7 +9,4 @@ public class AssignIssueRequest {
 
     private Long engineerId;
 
-    public AssignIssueRequest() {
-    }
-
 }

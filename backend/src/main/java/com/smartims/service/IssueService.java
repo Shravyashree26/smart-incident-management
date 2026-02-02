@@ -1,6 +1,7 @@
 package com.smartims.service;
 
 import com.smartims.dto.CreateIssueRequest;
+import com.smartims.dto.IssueResponse;
 import com.smartims.dto.SlaComplianceResponse;
 import com.smartims.dto.SlaStatusResponse;
 import com.smartims.entity.Issue;
@@ -30,5 +31,13 @@ public interface IssueService {
     SlaStatusResponse getSlaStatus(Long issueId);
 
     SlaComplianceResponse getSlaComplianceSummary();
+
+    IssueResponse getIssueById(Long id);
+
+    List<IssueResponse> getAllIssues();
+
+    IssueResponse assignIssue(Long issueId, Long engineerId);
+
+    List<IssueResponse> getIssuesByEngineer(Long engineerId);
 
 }

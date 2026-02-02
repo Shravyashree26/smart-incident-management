@@ -1,7 +1,6 @@
 package com.smartims.service.impl;
 
 import com.smartims.entity.AuditLog;
-import com.smartims.entity.User;
 import com.smartims.repository.AuditLogRepository;
 import com.smartims.repository.UserRepository;
 import com.smartims.service.AuditLogService;
@@ -22,22 +21,45 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Override
     public void log(String action, String entityType, Long entityId, String description) {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
+    }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Override
+    public void logSystem(String action, String details) {
 
-        AuditLog log = AuditLog.builder()
-                .actorEmail(user.getEmail())
-                .actorRole(user.getRole().name())
+        AuditLog auditLog = AuditLog.builder()
                 .action(action)
-                .entityType(entityType)
-                .entityId(entityId)
-                .description(description)
+                .description(details)
+                .actorRole("SYSTEM")
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        auditLogRepository.save(log);
+        auditLogRepository.save(auditLog);
     }
+
+
+    @Override
+    public void log(String action, String details) {
+
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        String performedBy;
+
+        if (auth == null || !auth.isAuthenticated()) {
+            performedBy = "SYSTEM"; // 👈 IMPORTANT
+        } else {
+            performedBy = auth.getName();
+        }
+
+        AuditLog auditLog = AuditLog.builder()
+                .action(action)
+                .description(details)
+                .actorRole(performedBy)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        auditLogRepository.save(auditLog);
+    }
+
 }

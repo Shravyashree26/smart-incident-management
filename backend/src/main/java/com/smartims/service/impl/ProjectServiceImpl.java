@@ -15,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,24 +30,71 @@ public class ProjectServiceImpl implements ProjectService {
     private final NotificationInboxService notificationInboxService;
 
     // 1️⃣ CREATE PROJECT
+//    @Override
+//    public ProjectResponse createProject(CreateProjectRequest request) {
+//
+//        User manager = userRepository.findById(request.getManagerId())
+//                .orElseThrow(() -> new RuntimeException("Manager not found"));
+//
+//        List<User> members = userRepository.findAllById(request.getMemberIds());
+//
+//        Project project = Project.builder()
+//                .name(request.getName())
+//                .description(request.getDescription())
+//                .manager(manager)
+//                .members(members)
+//                .build();
+//
+//        projectRepository.save(project);
+//
+//        // Notification
+//        notificationInboxService.notifyForProjectEvent(
+//                "PROJECT_MEMBER_ADDED",
+//                "User added to project " + project.getName(),
+//                project
+//        );
+//
+//        //Audit log
+//        auditLogService.log(
+//                "CREATE_PROJECT",
+//                "PROJECT",
+//                project.getId(),
+//                "Project created with manager " + project.getManager().getEmail()
+//        );
+//
+//        return mapToResponse(project);
+//    }
+
     @Override
     public ProjectResponse createProject(CreateProjectRequest request) {
+        // ✅ VALIDATE managerId
+        if (request.getManagerId() == null) {
+            throw new IllegalArgumentException("Manager ID must not be null");
+        }
 
+        // ✅ FETCH manager properly
         User manager = userRepository.findById(request.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Manager not found with id: " + request.getManagerId())
+                );
 
-        List<User> members = userRepository.findAllById(request.getMemberIds());
+        // ✅ FETCH members safely
+        List<User> members = new ArrayList<>();
+        if (request.getMemberIds() != null && !request.getMemberIds().isEmpty()) {
+            members = userRepository.findAllById(request.getMemberIds());
+        }
 
         Project project = Project.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .manager(manager)
                 .members(members)
+                .createdAt(LocalDateTime.now())
                 .build();
 
-        projectRepository.save(project);
+        Project savedProject = projectRepository.save(project);
 
-        // Notification
+        //Notification
         notificationInboxService.notifyForProjectEvent(
                 "PROJECT_MEMBER_ADDED",
                 "User added to project " + project.getName(),
@@ -59,6 +108,7 @@ public class ProjectServiceImpl implements ProjectService {
                 project.getId(),
                 "Project created with manager " + project.getManager().getEmail()
         );
+
 
         return mapToResponse(project);
     }

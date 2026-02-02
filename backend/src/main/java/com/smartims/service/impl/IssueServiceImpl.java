@@ -1,6 +1,7 @@
 package com.smartims.service.impl;
 
 import com.smartims.dto.CreateIssueRequest;
+import com.smartims.dto.IssueResponse;
 import com.smartims.dto.SlaComplianceResponse;
 import com.smartims.dto.SlaStatusResponse;
 import com.smartims.entity.*;
@@ -8,11 +9,13 @@ import com.smartims.enums.IssueStatus;
 import com.smartims.enums.Severity;
 import com.smartims.exception.ResourceNotFoundException;
 import com.smartims.exception.UnauthorizedException;
+import com.smartims.mapper.IssueMapper;
 import com.smartims.repository.*;
 import com.smartims.service.AuditLogService;
 import com.smartims.service.IssueActivityService;
 import com.smartims.service.IssueService;
 import com.smartims.service.NotificationInboxService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -65,7 +68,7 @@ public class IssueServiceImpl implements IssueService {
             severity = String.valueOf(request.getSeverity());
             priorityLevel = request.getPriorityLevel();
         } else {
-            severity = "NORMAL";        // default severity
+            severity = "MEDIUM";        // default severity
             priorityLevel = "P3";       // default priority
         }
 
@@ -215,6 +218,24 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
+    public IssueResponse getIssueById(Long id) {
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Issue not found with id: " + id)
+                );
+
+        return IssueMapper.toResponse(issue);
+    }
+
+    @Override
+    public List<IssueResponse> getAllIssues() {
+        return issueRepository.findAll()
+                .stream()
+                .map(IssueMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     public void assignEngineer(Long issueId, Long engineerId) {
 
         Issue issue = issueRepository.findById(issueId)
@@ -255,6 +276,35 @@ public class IssueServiceImpl implements IssueService {
                 "Assigned to engineer " + engineer.getEmail()
         );
     }
+
+    @Override
+    @Transactional
+    public IssueResponse assignIssue(Long issueId, Long engineerId) {
+
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() ->
+                        new RuntimeException("Issue not found with id: " + issueId)
+                );
+
+        User engineer = userRepository.findById(engineerId)
+                .orElseThrow(() ->
+                        new RuntimeException("Engineer not found with id: " + engineerId)
+                );
+
+        issue.setAssignedEngineer(engineer);
+
+        return IssueMapper.toResponse(issueRepository.save(issue));
+    }
+
+    @Override
+    public List<IssueResponse> getIssuesByEngineer(Long engineerId) {
+
+        return issueRepository.findByAssignedEngineerId(engineerId)
+                .stream()
+                .map(IssueMapper::toResponse)
+                .toList();
+    }
+
 
     private void recordSlaBreachIfNeeded(
             Issue issue,

@@ -70,6 +70,38 @@ public class IssueController {
         );
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<IssueResponse>> getIssueById(
+            @PathVariable Long id) {
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "Issue fetched successfully",
+                issueService.getIssueById(id)
+        );
+    }
+
+    @GetMapping("/{id}/issues")
+    public ResponseEntity<ApiResponse<List<IssueResponse>>> getEngineerIssues(
+            @PathVariable Long id) {
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "Engineer issues fetched successfully",
+                issueService.getIssuesByEngineer(id)
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<IssueResponse>>> getAllIssues() {
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "Issues fetched successfully",
+                issueService.getAllIssues()
+        );
+    }
+
     @PutMapping("/{issueId}/assign/{engineerId}")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Void>> assignEngineer(
@@ -82,6 +114,18 @@ public class IssueController {
                 HttpStatus.OK,
                 "Engineer assigned successfully",
                 null
+        );
+    }
+
+    @PostMapping("/{id}/assign")
+    public ResponseEntity<ApiResponse<IssueResponse>> assignIssue(
+            @PathVariable Long id,
+            @RequestBody AssignIssueRequest request) {
+
+        return ResponseUtil.success(
+                HttpStatus.OK,
+                "Issue assigned successfully",
+                issueService.assignIssue(id, request.getEngineerId())
         );
     }
 
