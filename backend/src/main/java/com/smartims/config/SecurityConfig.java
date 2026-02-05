@@ -34,6 +34,7 @@ public class SecurityConfig {
                                 "/api/auth/register/**",
                                 "/api/auth/forgot-password/**",
                                 "/api/contact/submit",
+                                "/api/public/**",
                                 "/actuator/**"
                         ).permitAll()
 

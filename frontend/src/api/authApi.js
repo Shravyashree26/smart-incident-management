@@ -57,3 +57,10 @@ export const resetPassword = (email, newPassword) => {
     { params: { email, newPassword } }
   );
 };
+
+export const sendContactForm = (data) => {
+  return axios.post(
+    "http://localhost:8080/api/contact/submit", 
+    data
+  );
+};
