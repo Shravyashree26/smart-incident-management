@@ -25,7 +25,6 @@ import {
 import { showError, showSuccess } from "../../utils/toast";
 
 const ROLE_OPTIONS = [
-  { value: "ADMIN", label: "Admin" },
   { value: "MANAGER", label: "Manager" },
   { value: "ENGINEER", label: "Engineer" },
   { value: "USER", label: "User" }
@@ -410,9 +409,7 @@ export default function AdminUserManagement() {
         if (editing) {
           await updateUser(editing.id, {
             fullName: form.fullName.trim(),
-            email: form.email.trim(),
-            role: form.role,
-            company: form.company?.trim() || ""
+            role: form.role
           });
           showSuccess("User updated");
         } else {
@@ -420,8 +417,7 @@ export default function AdminUserManagement() {
             fullName: form.fullName.trim(),
             email: form.email.trim(),
             password: form.password,
-            role: form.role,
-            company: form.company?.trim() || ""
+            role: form.role
           });
           showSuccess("User created");
         }
@@ -772,10 +768,29 @@ export default function AdminUserManagement() {
               <input
                 value={form.email}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                readOnly={Boolean(editing)}
+                className={`w-full rounded-xl border px-3 py-2 text-sm outline-none ${
+                  editing
+                    ? "border-gray-200 bg-gray-100 text-gray-600"
+                    : "border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                }`}
                 placeholder="e.g. jane@company.com"
               />
             </div>
+
+            {editing && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600">
+                  Company
+                </label>
+                <input
+                  value={form.company}
+                  readOnly
+                  className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600 outline-none"
+                  placeholder="-"
+                />
+              </div>
+            )}
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-600">
@@ -784,7 +799,12 @@ export default function AdminUserManagement() {
               <select
                 value={form.role}
                 onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={Boolean(editing)}
+                className={`w-full rounded-xl border px-3 py-2 text-sm outline-none ${
+                  editing
+                    ? "border-gray-200 bg-gray-100 text-gray-600"
+                    : "border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                }`}
               >
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -792,18 +812,6 @@ export default function AdminUserManagement() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600">
-                Company
-              </label>
-              <input
-                value={form.company}
-                onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="e.g. Acme Corp"
-              />
             </div>
 
             {!editing && (
@@ -914,4 +922,3 @@ export default function AdminUserManagement() {
     </div>
   );
 }
-

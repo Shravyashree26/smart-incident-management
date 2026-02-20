@@ -75,7 +75,7 @@ function IssueStatusChart({ items, selectedStatus, onSelect }) {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex h-full min-h-[360px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Issue Status</h2>
         <button
@@ -153,7 +153,7 @@ function PriorityPieChart({ items, selectedPriority, onSelect }) {
   });
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex h-full min-h-[360px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Priority Distribution</h2>
         <button
@@ -238,7 +238,7 @@ function PriorityPieChart({ items, selectedPriority, onSelect }) {
 function ProjectLoad({ items }) {
   if (!items.length) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex h-full min-h-[360px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Project Load</h2>
         <p className="mt-4 text-sm text-gray-500">No project data available.</p>
       </div>
@@ -247,11 +247,11 @@ function ProjectLoad({ items }) {
 
   const max = Math.max(1, ...items.map((item) => item.total));
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex h-full min-h-[360px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900">Project Load</h2>
       <p className="mt-1 text-xs text-gray-500">Issues grouped by project</p>
-      <div className="mt-4 space-y-3">
-        {items.slice(0, 6).map((item) => {
+      <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+        {items.map((item) => {
           const width = Math.max((item.total / max) * 100, item.total > 0 ? 8 : 0);
           return (
             <div key={item.projectId || item.name}>
@@ -405,14 +405,14 @@ export default function AdminDashboard() {
         <StatCard icon={CheckCircle2} label="Resolved Rate" value={`${resolvedRate}%`} hint={`${doneCount} issues resolved/closed`} tone="emerald" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-1">
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
+        <div className="h-full xl:col-span-1">
           <IssueStatusChart items={statusDistribution} selectedStatus={selectedStatus} onSelect={setSelectedStatus} />
         </div>
-        <div className="xl:col-span-1">
+        <div className="h-full xl:col-span-1">
           <PriorityPieChart items={priorityDistribution} selectedPriority={selectedPriority} onSelect={setSelectedPriority} />
         </div>
-        <div className="xl:col-span-1">
+        <div className="h-full xl:col-span-1">
           <ProjectLoad items={projectLoad} />
         </div>
       </div>

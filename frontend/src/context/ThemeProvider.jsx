@@ -26,13 +26,19 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   const storageKey = useMemo(() => getThemeStorageKey(user), [user?.userId, user?.email, user?.sub]);
-  const [theme, setTheme] = useState(() => getSavedTheme(LEGACY_THEME_KEY) || getSystemTheme());
+  const [theme, setTheme] = useState("light");
 
   const isAuthLightRoute =
     location.pathname === "/login" ||
+    location.pathname === "/" ||
+    location.pathname === "/maintenance" ||
+    location.pathname === "/unauthorized" ||
     location.pathname === "/authentication/register" ||
     location.pathname === "/forgot-password" ||
     location.pathname === "/reset-password";
+  const isAppShellRoute = /^(\/superadmin|\/admin|\/manager|\/engineer|\/user|\/profile|\/force-change-password)(\/|$)/.test(
+    location.pathname
+  );
 
   useEffect(() => {
     const savedForUser = getSavedTheme(storageKey);
@@ -40,15 +46,20 @@ export function ThemeProvider({ children }) {
       setTheme(savedForUser);
       return;
     }
+    if (user) {
+      // First login for this user: force light theme by default.
+      setTheme("light");
+      return;
+    }
     const legacyTheme = getSavedTheme(LEGACY_THEME_KEY);
     setTheme(legacyTheme || getSystemTheme());
-  }, [storageKey]);
+  }, [storageKey, user]);
 
   useEffect(() => {
     localStorage.setItem(storageKey, theme);
     localStorage.setItem(LEGACY_THEME_KEY, theme);
     const root = document.documentElement;
-    const shouldUseDark = !isAuthLightRoute && theme === "dark";
+    const shouldUseDark = isAppShellRoute && !isAuthLightRoute && theme === "dark";
     root.classList.toggle("dark", shouldUseDark);
     root.setAttribute("data-theme", shouldUseDark ? "dark" : "light");
   }, [theme, isAuthLightRoute, storageKey]);

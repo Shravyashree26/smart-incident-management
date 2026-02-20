@@ -3,6 +3,10 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  Lock,
+  Unlock,
+  UserCheck,
+  UserX,
   Trash2,
   SquarePen,
   X
@@ -11,7 +15,9 @@ import {
   createUser,
   deleteUser,
   getAllUsers,
-  updateUser
+  updateUser,
+  updateUserLockStatus,
+  updateUserStatus
 } from "../../api/userApi";
 import { showError, showSuccess } from "../../utils/toast";
 import LoadingButton from "../../components/common/LoadingButton";
@@ -144,6 +150,24 @@ function ConfirmDialog({
         </div>
       </div>
     </div>
+  );
+}
+
+function Badge({ tone = "gray", children }) {
+  const tones = {
+    gray: "bg-gray-100 text-gray-700 border-gray-200",
+    green: "bg-green-50 text-green-700 border-green-200",
+    red: "bg-red-50 text-red-700 border-red-200",
+    yellow: "bg-yellow-50 text-yellow-800 border-yellow-200"
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+        tones[tone] || tones.gray
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -388,6 +412,28 @@ export default function SuperAdminAddCompanyAdmin() {
     }
   };
 
+  const toggleEnabled = async (admin) => {
+    const next = !Boolean(admin?.enabled);
+    try {
+      await updateUserStatus(admin.id, next);
+      setAdmins((prev) => prev.map((a) => (a.id === admin.id ? { ...a, enabled: next } : a)));
+      showSuccess(next ? "Company admin enabled" : "Company admin disabled");
+    } catch (err) {
+      showError(getApiMessage(err));
+    }
+  };
+
+  const toggleLocked = async (admin) => {
+    const next = !Boolean(admin?.locked);
+    try {
+      await updateUserLockStatus(admin.id, next);
+      setAdmins((prev) => prev.map((a) => (a.id === admin.id ? { ...a, locked: next } : a)));
+      showSuccess(next ? "Company admin locked" : "Company admin unlocked");
+    } catch (err) {
+      showError(getApiMessage(err));
+    }
+  };
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -448,6 +494,12 @@ export default function SuperAdminAddCompanyAdmin() {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                 Company
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Lock
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
                 Actions
               </th>
@@ -457,13 +509,13 @@ export default function SuperAdminAddCompanyAdmin() {
           <tbody className="divide-y divide-gray-200 bg-white">
             {loading ? (
               <tr>
-                <td className="px-4 py-6 text-sm text-gray-600" colSpan={4}>
+                <td className="px-4 py-6 text-sm text-gray-600" colSpan={6}>
                   Loading company admins...
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td className="px-4 py-6 text-sm text-gray-700" colSpan={4}>
+                <td className="px-4 py-6 text-sm text-gray-700" colSpan={6}>
                   <div className="flex flex-col gap-2">
                     <div>
                       <span className="font-semibold">Failed to load:</span>{" "}
@@ -482,7 +534,7 @@ export default function SuperAdminAddCompanyAdmin() {
               </tr>
             ) : displayAdmins.length === 0 ? (
               <tr>
-                <td className="px-4 py-10 text-center text-sm text-gray-600" colSpan={4}>
+                <td className="px-4 py-10 text-center text-sm text-gray-600" colSpan={6}>
                   No company admins found.
                 </td>
               </tr>
@@ -498,6 +550,12 @@ export default function SuperAdminAddCompanyAdmin() {
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {a.company || "-"}
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {a.enabled ? <Badge tone="green">Enabled</Badge> : <Badge tone="red">Disabled</Badge>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {a.locked ? <Badge tone="yellow">Locked</Badge> : <Badge tone="gray">Unlocked</Badge>}
+                  </td>
                   <td className="px-4 py-3 text-right text-sm">
                     <div className="flex items-center justify-end gap-3">
                       {/* Edit */}
@@ -507,6 +565,66 @@ export default function SuperAdminAddCompanyAdmin() {
                         title="Edit company admin"
                       >
                         <SquarePen className="h-5 w-5" />
+                      </button>
+
+                      {/* Enable / Disable */}
+                      <button
+                        onClick={() =>
+                          openConfirm(
+                            {
+                              title: a.enabled ? "Disable company admin?" : "Enable company admin?",
+                              whatHappens: a.enabled
+                                ? "This will disable the account and prevent login until enabled again."
+                                : "This will enable the account and allow login.",
+                              confirmMessage: a.enabled
+                                ? "Are you sure you want to disable this company admin?"
+                                : "Are you sure you want to enable this company admin?",
+                              confirmText: a.enabled ? "Disable" : "Enable",
+                              tone: a.enabled ? "danger" : "neutral",
+                              icon: a.enabled ? UserX : UserCheck,
+                              user: a
+                            },
+                            async () => {
+                              await toggleEnabled(a);
+                            }
+                          )
+                        }
+                        className={`rounded-lg p-2 ${
+                          a.enabled ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"
+                        }`}
+                        title={a.enabled ? "Disable company admin" : "Enable company admin"}
+                      >
+                        {a.enabled ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}
+                      </button>
+
+                      {/* Lock / Unlock */}
+                      <button
+                        onClick={() =>
+                          openConfirm(
+                            {
+                              title: a.locked ? "Unlock company admin?" : "Lock company admin?",
+                              whatHappens: a.locked
+                                ? "This will unlock the account and allow login (if enabled)."
+                                : "This will lock the account and block login.",
+                              confirmMessage: a.locked
+                                ? "Are you sure you want to unlock this company admin?"
+                                : "Are you sure you want to lock this company admin?",
+                              confirmText: a.locked ? "Unlock" : "Lock",
+                              tone: a.locked ? "neutral" : "danger",
+                              icon: a.locked ? Unlock : Lock,
+                              user: a
+                            },
+                            async () => {
+                              await toggleLocked(a);
+                            }
+                          )
+                        }
+                        className={`rounded-lg p-2 ${
+                          a.locked ? "text-green-600 hover:bg-green-50" : "text-yellow-600 hover:bg-yellow-50"
+                        }`}
+                        title={a.locked ? "Unlock company admin" : "Lock company admin"}
+                      >
+                        {a.locked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                       </button>
 
                       {/* Delete */}

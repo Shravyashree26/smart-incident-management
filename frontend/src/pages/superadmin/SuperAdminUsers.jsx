@@ -54,10 +54,8 @@ export default function SuperAdminUsers() {
   const displayUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = users.filter((u) => {
-      const matchesRole =
-        roleFilter === "ALL" ? true : String(u?.role) === roleFilter;
-      const matchesCompany =
-        companyFilter === "ALL" ? true : u?.company === companyFilter;
+      const matchesRole = roleFilter === "ALL" ? true : String(u?.role) === roleFilter;
+      const matchesCompany = companyFilter === "ALL" ? true : u?.company === companyFilter;
       const hay = `${u?.fullName || ""} ${u?.email || ""} ${u?.company || ""}`.toLowerCase();
       const matchesSearch = q ? hay.includes(q) : true;
       return matchesRole && matchesCompany && matchesSearch;
@@ -94,19 +92,13 @@ export default function SuperAdminUsers() {
         className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-gray-100"
       >
         <span>{label}</span>
-        <span className={`text-[10px] ${active ? "text-gray-900" : "text-gray-400"}`}>
-          {dirArrow}
-        </span>
+        <span className={`text-[10px] ${active ? "text-gray-900" : "text-gray-400"}`}>{dirArrow}</span>
       </button>
     );
   };
 
   const companies = useMemo(() => {
-    const set = new Set(
-      users
-        .map((u) => u.company)
-        .filter((c) => c && String(c).trim().length > 0)
-    );
+    const set = new Set(users.map((u) => u.company).filter((c) => c && String(c).trim().length > 0));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [users]);
 
@@ -115,9 +107,7 @@ export default function SuperAdminUsers() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Users</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            View and analyze users across all companies (read-only).
-          </p>
+          <p className="mt-1 text-sm text-gray-600">View and analyze users across all companies (read-only).</p>
         </div>
         <div className="text-sm text-gray-600">
           {displayUsers.length} user{displayUsers.length === 1 ? "" : "s"}
@@ -198,16 +188,10 @@ export default function SuperAdminUsers() {
             ) : (
               displayUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                    {u.fullName || "-"}
-                  </td>
+                  <td className="px-4 py-2 text-sm font-medium text-gray-900">{u.fullName || "-"}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{u.email || "-"}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
-                    {String(u.role || "-")}
-                  </td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
-                    {u.company || "-"}
-                  </td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{String(u.role || "-")}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{u.company || "-"}</td>
                 </tr>
               ))
             )}
