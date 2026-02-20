@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,17 +29,6 @@ public class NotificationInboxServiceImpl
             String type,
             String message,
             Issue issue) {
-
-        // 1️⃣ Create notification (once)
-        Notification notification = Notification.builder()
-                .type(type)
-                .message(message)
-                .entityType("ISSUE")
-                .entityId(issue.getId())
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        notificationRepository.save(notification);
 
         // 2️⃣ Determine recipients
         List<User> recipients = new ArrayList<>();
@@ -58,17 +49,7 @@ public class NotificationInboxServiceImpl
                 .distinct()
                 .toList();
 
-        // 4️⃣ Save per-user notification
-        for (User user : recipients) {
-            userNotificationRepository.save(
-                    UserNotification.builder()
-                            .user(user)
-                            .notification(notification)
-                            .read(false)
-                            .receivedAt(LocalDateTime.now())
-                            .build()
-            );
-        }
+        notifyUsers(type, message, "ISSUE", issue.getId(), recipients);
     }
 
     @Override
@@ -76,16 +57,6 @@ public class NotificationInboxServiceImpl
             String type,
             String message,
             Project project) {
-
-        Notification notification = Notification.builder()
-                .type(type)
-                .message(message)
-                .entityType("PROJECT")
-                .entityId(project.getId())
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        notificationRepository.save(notification);
 
         List<User> recipients = new ArrayList<>();
 
@@ -102,7 +73,37 @@ public class NotificationInboxServiceImpl
 
         recipients = recipients.stream().distinct().toList();
 
+        notifyUsers(type, message, "PROJECT", project.getId(), recipients);
+    }
+
+    @Override
+    public void notifyUsers(
+            String type,
+            String message,
+            String entityType,
+            Long entityId,
+            List<User> recipients
+    ) {
+        if (recipients == null || recipients.isEmpty()) {
+            return;
+        }
+
+        Notification notification = Notification.builder()
+                .type(type)
+                .message(message)
+                .entityType(entityType)
+                .entityId(entityId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notificationRepository.save(notification);
+
+        Map<Long, User> unique = new LinkedHashMap<>();
         for (User user : recipients) {
+            if (user == null || user.getId() == null) continue;
+            unique.put(user.getId(), user);
+        }
+
+        for (User user : unique.values()) {
             userNotificationRepository.save(
                     UserNotification.builder()
                             .user(user)
@@ -113,5 +114,4 @@ public class NotificationInboxServiceImpl
             );
         }
     }
-
 }

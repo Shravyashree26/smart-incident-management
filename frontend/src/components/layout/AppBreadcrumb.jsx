@@ -2,6 +2,7 @@ import { ChevronRight, Home } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SIDEBAR_CONFIG } from "../../config/sidebarConfig";
 import { useAuth } from "../../context/useAuth";
+import { normalizeRole } from "../../utils/roleRouting";
 
 function toTitleCase(value) {
   return String(value || "")
@@ -30,7 +31,7 @@ export default function AppBreadcrumb() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const role = String(user?.role || "");
+  const role = normalizeRole(user?.role);
   const pageLabel = getPageLabel(location.pathname, role);
 
   const dashboardPath =

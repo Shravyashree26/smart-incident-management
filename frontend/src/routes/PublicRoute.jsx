@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { getDashboardPathByRole } from "../utils/roleRouting";
 
 export default function PublicRoute({ children }) {
   const { token, user } = useAuth();
@@ -10,18 +11,7 @@ export default function PublicRoute({ children }) {
       return <Navigate to="/force-change-password" replace />;
     }
 
-    const role = user.role;
-
-    switch (role) {
-      case "ADMIN":
-        return <Navigate to="/admin/dashboard" replace />;
-      case "MANAGER":
-        return <Navigate to="/manager/dashboard" replace />;
-      case "ENGINEER":
-        return <Navigate to="/engineer/dashboard" replace />;
-      default:
-        return <Navigate to="/user/dashboard" replace />;
-    }
+    return <Navigate to={getDashboardPathByRole(user?.role)} replace />;
   }
 
   return children;

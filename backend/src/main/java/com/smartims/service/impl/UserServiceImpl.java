@@ -8,6 +8,7 @@ import com.smartims.repository.UserRepository;
 import com.smartims.security.JwtService;
 import com.smartims.service.AuditLogService;
 import com.smartims.service.EmailService;
+import com.smartims.service.NotificationInboxService;
 import com.smartims.service.PendingRegisterStore;
 import com.smartims.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,7 @@ public class UserServiceImpl implements UserService {
     private final PendingRegisterStore pendingRegisterStore;
     private final AuditLogService auditLogService;
     private final EmailService emailService;
+    private final NotificationInboxService notificationInboxService;
 
     @Value("${app.frontend.login-url:http://localhost:5173/login}")
     private String frontendLoginUrl;
@@ -102,6 +105,13 @@ public class UserServiceImpl implements UserService {
                 savedUser.getId(),
                 "User account created from pending registration"
         );
+
+        sendUserNotification(
+                "USER_CREATED",
+                "Your account was created successfully.",
+                savedUser,
+                true
+        );
     }
 
     @Override
@@ -120,6 +130,13 @@ public class UserServiceImpl implements UserService {
                 "USER",
                 user.getId(),
                 "User account enabled"
+        );
+
+        sendUserNotification(
+                "USER_ENABLED",
+                "Your account has been enabled.",
+                user,
+                true
         );
     }
 
@@ -146,6 +163,13 @@ public class UserServiceImpl implements UserService {
                 "Password reset completed",
                 user.getId(),
                 "USER"
+        );
+
+        sendUserNotification(
+                "PASSWORD_RESET",
+                "Your password has been reset.",
+                user,
+                true
         );
     }
 
@@ -198,6 +222,13 @@ public class UserServiceImpl implements UserService {
                 "USER",
                 savedUser.getId(),
                 "User created by admin with role " + savedUser.getRole()
+        );
+
+        sendUserNotification(
+                "USER_CREATED_BY_ADMIN",
+                "A new user account was created for " + savedUser.getEmail() + ".",
+                savedUser,
+                true
         );
 
         // Email credentials + login link to the newly created user
@@ -323,6 +354,13 @@ public class UserServiceImpl implements UserService {
                 "User details updated"
         );
 
+        sendUserNotification(
+                "USER_UPDATED",
+                "Your account details were updated.",
+                updatedUser,
+                true
+        );
+
         return mapToResponse(updatedUser);
     }
 
@@ -342,6 +380,13 @@ public class UserServiceImpl implements UserService {
                 "USER",
                 id,
                 "User account deleted: " + user.getEmail()
+        );
+
+        sendUserNotification(
+                "USER_DELETED",
+                "User account deleted: " + user.getEmail(),
+                user,
+                false
         );
     }
 
@@ -363,6 +408,15 @@ public class UserServiceImpl implements UserService {
                 user.getId(),
                 enabled ? "User enabled" : "User disabled"
         );
+
+        sendUserNotification(
+                "UPDATE_USER_STATUS",
+                enabled
+                        ? "Your account has been enabled by an administrator."
+                        : "Your account has been disabled by an administrator.",
+                user,
+                true
+        );
     }
 
     @Override
@@ -382,6 +436,15 @@ public class UserServiceImpl implements UserService {
                 "USER",
                 user.getId(),
                 locked ? "User account locked" : "User account unlocked"
+        );
+
+        sendUserNotification(
+                "UPDATE_USER_LOCK",
+                locked
+                        ? "Your account has been locked by an administrator."
+                        : "Your account has been unlocked by an administrator.",
+                user,
+                true
         );
     }
 
@@ -413,8 +476,51 @@ public class UserServiceImpl implements UserService {
                 "User changed password"
         );
 
+        sendUserNotification(
+                "CHANGE_PASSWORD",
+                "Your password has been changed successfully.",
+                user,
+                true
+        );
+
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, user.getRole(), user.isMustChangePassword());
+    }
+
+    private void sendUserNotification(
+            String type,
+            String message,
+            User targetUser,
+            boolean includeTargetUser
+    ) {
+        try {
+            List<User> recipients = new ArrayList<>();
+            recipients.addAll(userRepository.findByRole(Role.SUPER_ADMIN));
+
+            String company = targetUser != null ? targetUser.getCompany() : null;
+            if (company != null && !company.isBlank()) {
+                recipients.addAll(userRepository.findByRoleAndCompany(Role.ADMIN, company));
+            }
+
+            if (includeTargetUser && targetUser != null) {
+                recipients.add(targetUser);
+            }
+
+            notificationInboxService.notifyUsers(
+                    type,
+                    message,
+                    "USER",
+                    targetUser != null ? targetUser.getId() : null,
+                    recipients
+            );
+        } catch (Exception ex) {
+            auditLogService.logSystem(
+                    "NOTIFICATION_DISPATCH_FAILED",
+                    "Failed to dispatch USER notification for action " + type,
+                    targetUser != null ? targetUser.getId() : null,
+                    "USER"
+            );
+        }
     }
 
     private UserResponse mapToResponse(User user) {

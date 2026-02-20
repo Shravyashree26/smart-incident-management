@@ -8,6 +8,7 @@ import { showSuccess, showError } from "../../utils/toast";
 import bgImage from "../../assets/background.png";
 import { useEffect } from "react";
 import { useAuth } from "../../context/useAuth";
+import { getDashboardPathByRole } from "../../utils/roleRouting";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function Login() {
   // 🔐 BLOCK BACK/FORWARD TO LOGIN WHEN LOGGED IN
   useEffect(() => {
     if (token && user) {
-      navigate(`/${user.role.toLowerCase()}/dashboard`, {
+      navigate(getDashboardPathByRole(user?.role), {
         replace: true
       });
     }
@@ -55,11 +56,7 @@ export default function Login() {
       }
 
       // Determine dashboard path based on role
-      const dashboardPath =
-        data.role === "ADMIN" ? "/admin/dashboard" :
-          data.role === "MANAGER" ? "/manager/dashboard" :
-            data.role === "ENGINEER" ? "/engineer/dashboard" :
-              "/user/dashboard";
+      const dashboardPath = getDashboardPathByRole(data.role);
 
       // Use a small delay to ensure state is updated before navigation
       // This ensures ProtectedRoute sees the updated auth state

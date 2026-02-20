@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { changePassword } from "../../api/userApi";
 import { showError, showSuccess } from "../../utils/toast";
 import { useAuth } from "../../context/useAuth";
+import { getDashboardPathByRole } from "../../utils/roleRouting";
 
 export default function ForceChangePassword() {
   const navigate = useNavigate();
@@ -57,14 +58,7 @@ export default function ForceChangePassword() {
       showSuccess("Password updated successfully");
 
       const role = data?.role || user?.role;
-      const dashboardPath =
-        role === "ADMIN"
-          ? "/admin/dashboard"
-          : role === "MANAGER"
-            ? "/manager/dashboard"
-            : role === "ENGINEER"
-              ? "/engineer/dashboard"
-              : "/user/dashboard";
+      const dashboardPath = getDashboardPathByRole(role);
 
       navigate(dashboardPath, { replace: true });
     } catch (err) {
@@ -172,4 +166,3 @@ export default function ForceChangePassword() {
     </div>
   );
 }
-

@@ -193,6 +193,8 @@ export default function SuperAdminAddCompanyAdmin() {
       ? "border-red-500 focus:ring-2 focus:ring-red-500"
       : "border-gray-300 focus:ring-2 focus:ring-indigo-500";
 
+  const normalizeCompany = (value) => String(value || "").trim().toLowerCase();
+
   const companies = useMemo(() => {
     const set = new Set(
       admins
@@ -202,24 +204,19 @@ export default function SuperAdminAddCompanyAdmin() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [admins]);
 
-  // Get companies without admins (for creating new admins only)
-  const availableCompanies = useMemo(() => {
-    if (editing) return companies; // Show all companies when editing
-    const set = new Set(
-      admins
-        .map((a) => a.company)
-        .filter((c) => c && String(c).trim().length > 0)
-    );
-    // Return all existing companies plus any "new" companies
-    // We allow typing new company names when creating
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [admins, editing]);
-
-  // Check if selected company already has an admin
+  // Check if selected company already has another admin (excluding self during edit)
   const selectedCompanyHasAdmin = useMemo(() => {
-    if (editing || !form.company.trim()) return false;
-    return admins.some((admin) => admin.company === form.company.trim());
+    if (!form.company.trim()) return false;
+    const target = normalizeCompany(form.company);
+    return admins.some((admin) => {
+      if (editing && admin.id === editing.id) return false;
+      return normalizeCompany(admin.company) === target;
+    });
   }, [form.company, admins, editing]);
+
+  const companyFieldClasses = selectedCompanyHasAdmin
+    ? "w-full rounded-xl border border-red-500 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-500"
+    : "w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500";
 
   const displayAdmins = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -329,16 +326,16 @@ export default function SuperAdminAddCompanyAdmin() {
       return;
     }
 
-    if (!editing) {
-      // Check if company already has an admin
-      const companyHasAdmin = admins.some(
-        (admin) => admin.company === form.company.trim()
-      );
-      if (companyHasAdmin) {
-        showError(`Company "${form.company.trim()}" already has an admin. Only 1 admin per company is allowed.`);
-        return;
-      }
+    const companyHasAdmin = admins.some((admin) => {
+      if (editing && admin.id === editing.id) return false;
+      return normalizeCompany(admin.company) === normalizeCompany(form.company);
+    });
+    if (companyHasAdmin) {
+      showError(`Company "${form.company.trim()}" already has an admin. Only 1 admin per company is allowed.`);
+      return;
+    }
 
+    if (!editing) {
       if ((form.password || "").length < 6) {
         showError("Password must be at least 6 characters");
         return;
@@ -396,7 +393,7 @@ export default function SuperAdminAddCompanyAdmin() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800">
-            Super Admin · Company Admins
+            Company Admins
           </h1>
           <p className="mt-1 text-sm text-gray-600">
             Add and manage company-level admins. Each company admin manages projects and users within their own company.
@@ -583,9 +580,16 @@ export default function SuperAdminAddCompanyAdmin() {
                 Email
               </label>
               <input
+                type="email"
                 value={form.email}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                readOnly={Boolean(editing)}
+                autoComplete="off"
+                className={`w-full rounded-xl border px-3 py-2 text-sm outline-none ${
+                  editing
+                    ? "border-gray-200 bg-gray-100 text-gray-600"
+                    : "border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                }`}
                 placeholder="e.g. jane@company.com"
               />
             </div>
@@ -594,34 +598,22 @@ export default function SuperAdminAddCompanyAdmin() {
               <label className="mb-1 block text-xs font-semibold text-gray-600">
                 Company
               </label>
-              {!editing && availableCompanies.length > 0 ? (
-                <select
-                  value={form.company}
-                  onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Select a company...</option>
-                  {availableCompanies.map((c) => {
-                    const hasAdmin = admins.some((a) => a.company === c);
-                    return (
-                      <option key={c} value={c} disabled={hasAdmin}>
-                        {c}
-                        {hasAdmin ? " (has admin)" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              ) : (
-                <input
-                  value={form.company}
-                  onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g. Acme Corp"
-                />
-              )}
-              {selectedCompanyHasAdmin && !editing && (
+              <input
+                type="text"
+                value={form.company}
+                onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))}
+                readOnly={Boolean(editing)}
+                autoComplete="off"
+                className={
+                  editing
+                    ? "w-full rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600 outline-none"
+                    : companyFieldClasses
+                }
+                placeholder="e.g. Acme Corp"
+              />
+              {selectedCompanyHasAdmin && (
                 <p className="mt-1 text-xs font-medium text-red-700">
-                  ⚠️ This company already has an admin. Only 1 admin per company allowed.
+                  This company already has an admin registered for this company.
                 </p>
               )}
             </div>
@@ -723,9 +715,9 @@ export default function SuperAdminAddCompanyAdmin() {
             </button>
             <button
               type="submit"
-              disabled={saving || (!editing && selectedCompanyHasAdmin)}
+              disabled={saving || selectedCompanyHasAdmin}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-              title={!editing && selectedCompanyHasAdmin ? "Company already has an admin" : ""}
+              title={selectedCompanyHasAdmin ? "Company already has an admin" : ""}
             >
               {saving ? "Saving..." : editing ? "Save changes" : "Create company admin"}
             </button>
@@ -735,4 +727,3 @@ export default function SuperAdminAddCompanyAdmin() {
     </div>
   );
 }
-

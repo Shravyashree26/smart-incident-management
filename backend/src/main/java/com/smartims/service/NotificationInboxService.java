@@ -2,6 +2,9 @@ package com.smartims.service;
 
 import com.smartims.entity.Issue;
 import com.smartims.entity.Project;
+import com.smartims.entity.User;
+
+import java.util.List;
 
 public interface NotificationInboxService {
 
@@ -15,6 +18,14 @@ public interface NotificationInboxService {
             String type,
             String message,
             Project project
+    );
+
+    void notifyUsers(
+            String type,
+            String message,
+            String entityType,
+            Long entityId,
+            List<User> recipients
     );
 }
 

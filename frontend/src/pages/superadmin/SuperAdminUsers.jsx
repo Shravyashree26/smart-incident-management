@@ -86,7 +86,7 @@ export default function SuperAdminUsers() {
 
   const SortHeader = ({ label, sortKey }) => {
     const active = sortBy === sortKey;
-    const dirArrow = !active ? "↕" : sortDir === "asc" ? "↑" : "↓";
+    const dirArrow = !active ? "<>" : sortDir === "asc" ? "^" : "v";
     return (
       <button
         type="button"
@@ -114,7 +114,7 @@ export default function SuperAdminUsers() {
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Super Admin · Users</h1>
+          <h1 className="text-xl font-bold text-gray-900">Users</h1>
           <p className="mt-1 text-sm text-gray-600">
             View and analyze users across all companies (read-only).
           </p>
@@ -217,4 +217,3 @@ export default function SuperAdminUsers() {
     </div>
   );
 }
-

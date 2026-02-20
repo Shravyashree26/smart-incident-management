@@ -114,7 +114,7 @@ export default function AppRoutes() {
         <Route
           path="/force-change-password"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "ENGINEER", "USER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_ADMIN", "ADMIN", "MANAGER", "ENGINEER", "USER"]}>
               <ForceChangePassword />
             </ProtectedRoute>
           }

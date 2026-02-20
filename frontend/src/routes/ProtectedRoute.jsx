@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { normalizeRole } from "../utils/roleRouting";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user } = useAuth();
@@ -25,7 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   // Role protection
   if (
     allowedRoles &&
-    !allowedRoles.includes(user.role)
+    !allowedRoles.includes(normalizeRole(user?.role))
   ) {
     return <Navigate to="/unauthorized" replace />;
   }

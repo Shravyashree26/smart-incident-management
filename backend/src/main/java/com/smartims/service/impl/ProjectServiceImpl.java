@@ -191,6 +191,12 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project updatedProject = projectRepository.save(project);
 
+        notificationInboxService.notifyForProjectEvent(
+                "PROJECT_UPDATED",
+                "Project updated: " + updatedProject.getName(),
+                updatedProject
+        );
+
         auditLogService.log(
                 "PROJECT_UPDATED",
                 "PROJECT",
@@ -209,6 +215,12 @@ public class ProjectServiceImpl implements ProjectService {
 
         // Check access permissions
         validateProjectAccess(project);
+
+        notificationInboxService.notifyForProjectEvent(
+                "PROJECT_DELETED",
+                "Project deleted: " + project.getName(),
+                project
+        );
 
         projectRepository.delete(project);
 

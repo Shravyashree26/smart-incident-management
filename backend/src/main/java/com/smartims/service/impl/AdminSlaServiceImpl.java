@@ -11,6 +11,7 @@ import com.smartims.repository.SlaPolicyRepository;
 import com.smartims.repository.UserRepository;
 import com.smartims.service.AdminSlaService;
 import com.smartims.service.AuditLogService;
+import com.smartims.service.NotificationInboxService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,7 @@ public class AdminSlaServiceImpl extends AdminSlaService {
     private final SlaPolicyRepository slaPolicyRepository;
     private final AuditLogService auditLogService;
     private final UserRepository userRepository;
+    private final NotificationInboxService notificationInboxService;
 
     @Override
     public SlaPolicy updatePolicy(
@@ -54,6 +56,13 @@ public class AdminSlaServiceImpl extends AdminSlaService {
         policy.setDescription(request.getDescription());
 
         SlaPolicy updatedPolicy = slaPolicyRepository.save(policy);
+
+        notificationInboxService.notifyForProjectEvent(
+                "SLA_POLICY_UPDATED",
+                "SLA policy updated for project '" + policy.getProject().getName()
+                        + "' (" + normalizedPriority + ")",
+                policy.getProject()
+        );
 
         auditLogService.log(
                 "SLA_POLICY_UPDATED",
@@ -85,6 +94,14 @@ public class AdminSlaServiceImpl extends AdminSlaService {
 
         Long policyId = policy.getId();
         Integer oldResolution = policy.getResolutionTimeMinutes();
+
+        notificationInboxService.notifyForProjectEvent(
+                "SLA_POLICY_DELETED",
+                "SLA policy deleted for project '" + policy.getProject().getName()
+                        + "' (" + normalizedPriority + ")",
+                policy.getProject()
+        );
+
         slaPolicyRepository.delete(policy);
 
         auditLogService.log(

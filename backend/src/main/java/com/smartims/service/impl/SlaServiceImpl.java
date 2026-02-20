@@ -81,6 +81,13 @@ public class SlaServiceImpl implements SlaService {
 
         SlaPolicy savedPolicy = slaPolicyRepository.save(slaPolicy);
 
+        notificationInboxService.notifyForProjectEvent(
+                "SLA_CREATED",
+                "SLA policy created for project '" + project.getName()
+                        + "' (" + savedPolicy.getPriorityLevel() + ")",
+                project
+        );
+
         auditLogService.log(
                 "SLA_CREATED",
                 "PROJECT",

@@ -3,12 +3,13 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { SIDEBAR_CONFIG } from "../../config/sidebarConfig";
 import { useAuth } from "../../context/useAuth";
+import { normalizeRole } from "../../utils/roleRouting";
 
 const Sidebar = () => {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const menuItems = SIDEBAR_CONFIG[user?.role] || [];
+  const menuItems = SIDEBAR_CONFIG[normalizeRole(user?.role)] || [];
 
   return (
     <aside
