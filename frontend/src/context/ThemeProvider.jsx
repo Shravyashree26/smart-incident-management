@@ -26,7 +26,8 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   const storageKey = useMemo(() => getThemeStorageKey(user), [user?.userId, user?.email, user?.sub]);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => getSavedTheme(LEGACY_THEME_KEY) || getSystemTheme());
+  const [loadedThemeKey, setLoadedThemeKey] = useState(null);
 
   const isAuthLightRoute =
     location.pathname === "/login" ||
@@ -42,27 +43,33 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const savedForUser = getSavedTheme(storageKey);
-    if (savedForUser) {
-      setTheme(savedForUser);
-      return;
-    }
-    if (user) {
-      // First login for this user: force light theme by default.
-      setTheme("light");
-      return;
-    }
     const legacyTheme = getSavedTheme(LEGACY_THEME_KEY);
-    setTheme(legacyTheme || getSystemTheme());
-  }, [storageKey, user]);
+    const nextTheme = savedForUser || legacyTheme || getSystemTheme();
+
+    setTheme(nextTheme);
+
+    if (savedForUser) {
+      setLoadedThemeKey(storageKey);
+      return;
+    }
+    if (legacyTheme) {
+      // Migrate legacy theme to user-scoped key on first load.
+      setLoadedThemeKey(storageKey);
+      return;
+    }
+    setLoadedThemeKey(storageKey);
+  }, [storageKey]);
 
   useEffect(() => {
+    if (loadedThemeKey !== storageKey) return;
+
     localStorage.setItem(storageKey, theme);
     localStorage.setItem(LEGACY_THEME_KEY, theme);
     const root = document.documentElement;
     const shouldUseDark = isAppShellRoute && !isAuthLightRoute && theme === "dark";
     root.classList.toggle("dark", shouldUseDark);
     root.setAttribute("data-theme", shouldUseDark ? "dark" : "light");
-  }, [theme, isAuthLightRoute, isAppShellRoute, storageKey]);
+  }, [theme, isAuthLightRoute, isAppShellRoute, storageKey, loadedThemeKey]);
 
   const value = useMemo(
     () => ({

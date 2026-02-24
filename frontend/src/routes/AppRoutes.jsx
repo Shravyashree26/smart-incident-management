@@ -44,6 +44,8 @@ import AssignIssues from "../pages/manager/AssignIssues";
 import ManagerSlaMonitoring from "../pages/manager/ManagerSlaMonitoring";
 import ManagerWorkload from "../pages/manager/ManagerWorkload";
 import ManagerReports from "../pages/manager/ManagerReports";
+import ManagerResolvedIssues from "../pages/manager/ManagerResolvedIssues";
+import MyIssues from "../pages/engineer/MyIssues";
 
 export default function AppRoutes() {
   return (
@@ -255,6 +257,14 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/manager/resolved-issues"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <ManagerResolvedIssues />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
         <Route
           path="/engineer/project"
@@ -276,7 +286,15 @@ export default function AppRoutes() {
           path="/engineer/issues"
           element={
             <ProtectedRoute allowedRoles={["ENGINEER"]}>
-              <PlaceholderPage title="Engineer · Assigned Issues" />
+              <MyIssues />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/engineer/issues/:issueId"
+          element={
+            <ProtectedRoute allowedRoles={["ENGINEER"]}>
+              <UserIssueDetails />
             </ProtectedRoute>
           }
         />

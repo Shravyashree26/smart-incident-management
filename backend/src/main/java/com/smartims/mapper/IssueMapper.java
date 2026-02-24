@@ -31,6 +31,7 @@ public class IssueMapper {
                 .projectId(issue.getProject().getId())
                 .projectName(issue.getProject().getName())
                 .createdAt(issue.getCreatedAt())
+                .resolvedAt(issue.getResolvedAt())
                 .build();
     }
 }

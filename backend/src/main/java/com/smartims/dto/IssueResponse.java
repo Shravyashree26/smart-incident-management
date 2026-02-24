@@ -25,4 +25,5 @@ public class IssueResponse {
     private String projectName;
 
     private LocalDateTime createdAt;
+    private LocalDateTime resolvedAt;
 }

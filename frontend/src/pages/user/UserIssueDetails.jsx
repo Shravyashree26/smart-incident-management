@@ -10,15 +10,19 @@ import {
   UserRound
 } from "lucide-react";
 import {
+  addIssueComment,
   getIssueAttachmentDownloadUrl,
   getIssueAttachments,
   getIssueById,
+  getIssueComments,
   getIssueSlaStatus,
-  getIssueTimeline
+  getIssueTimeline,
+  updateIssueStatus
 } from "../../api/issuesApi";
-import { showError } from "../../utils/toast";
+import { useAuth } from "../../context/useAuth";
+import { showError, showSuccess } from "../../utils/toast";
 
-const TABS = ["Overview", "Activity History", "SLA Details", "Attachments"];
+const TABS = ["Overview", "Activity History", "SLA Details", "Attachments", "Comments"];
 
 function getApiMessage(err) {
   return (
@@ -113,6 +117,7 @@ function badgeClassBySeverity(severity) {
 
 export default function UserIssueDetails() {
   const { issueId } = useParams();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("Overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,21 +125,28 @@ export default function UserIssueDetails() {
   const [timeline, setTimeline] = useState([]);
   const [sla, setSla] = useState(null);
   const [attachments, setAttachments] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [commentSaving, setCommentSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const role = String(user?.role || "").toUpperCase();
 
   const fetchData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [issueRes, slaRes, timelineRes, attachmentRes] = await Promise.all([
+      const [issueRes, slaRes, timelineRes, attachmentRes, commentsRes] = await Promise.all([
         getIssueById(issueId),
         getIssueSlaStatus(issueId),
         getIssueTimeline(issueId),
-        getIssueAttachments(issueId)
+        getIssueAttachments(issueId),
+        getIssueComments(issueId)
       ]);
       setIssue(unwrapData(issueRes));
       setSla(unwrapData(slaRes));
       setTimeline(unwrapArrayData(timelineRes));
       setAttachments(unwrapArrayData(attachmentRes));
+      setComments(unwrapArrayData(commentsRes));
     } catch (err) {
       const msg = getApiMessage(err);
       setError(msg);
@@ -157,6 +169,47 @@ export default function UserIssueDetails() {
     const mins = Math.max(0, Math.round((due - start) / 60000));
     return formatMinutesAsHours(mins);
   }, [sla]);
+
+  const refreshComments = async () => {
+    try {
+      const commentsRes = await getIssueComments(issueId);
+      setComments(unwrapArrayData(commentsRes));
+    } catch (err) {
+      showError(getApiMessage(err));
+    }
+  };
+
+  const handleAddComment = async () => {
+    const text = String(commentText || "").trim();
+    if (!text) {
+      showError("Comment cannot be empty");
+      return;
+    }
+    try {
+      setCommentSaving(true);
+      await addIssueComment(issueId, text);
+      setCommentText("");
+      await refreshComments();
+      showSuccess("Comment added");
+    } catch (err) {
+      showError(getApiMessage(err));
+    } finally {
+      setCommentSaving(false);
+    }
+  };
+
+  const handleManagerStatusUpdate = async (nextStatus) => {
+    try {
+      setStatusSaving(true);
+      await updateIssueStatus(issueId, nextStatus);
+      setIssue((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+      showSuccess(`Issue moved to ${formatStatus(nextStatus)}`);
+    } catch (err) {
+      showError(getApiMessage(err));
+    } finally {
+      setStatusSaving(false);
+    }
+  };
 
   if (loading) {
     return <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">Loading issue details...</div>;
@@ -202,6 +255,37 @@ export default function UserIssueDetails() {
           </div>
         </div>
       </section>
+
+      {role === "MANAGER" && String(issue?.status || "").toUpperCase() === "RESOLVED" && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-amber-900">Manager Review Required</h2>
+              <p className="mt-1 text-sm text-amber-800">
+                Close the issue if verified, or add feedback in Comments tab and return it to engineer.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={statusSaving}
+                onClick={() => handleManagerStatusUpdate("OPEN")}
+                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+              >
+                Return To Engineer
+              </button>
+              <button
+                type="button"
+                disabled={statusSaving}
+                onClick={() => handleManagerStatusUpdate("CLOSED")}
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+              >
+                Close Issue
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
         {TABS.map((tab) => (
@@ -364,6 +448,47 @@ export default function UserIssueDetails() {
               </table>
             </div>
           )}
+        </section>
+      )}
+
+      {activeTab === "Comments" && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h2 className="text-3xl font-semibold text-gray-900">Comments</h2>
+          <div className="mt-4 space-y-3">
+            {comments.length === 0 ? (
+              <p className="text-sm text-gray-600">No comments yet.</p>
+            ) : (
+              comments.map((item) => (
+                <article key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-gray-900">{item.commentedBy || "Unknown"}</p>
+                    <p className="text-xs text-gray-500">{formatDateTime(item.createdAt)}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700">{item.comment || "-"}</p>
+                </article>
+              ))
+            )}
+          </div>
+          <div className="mt-5 rounded-xl border border-gray-200 p-3">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Add Comment</label>
+            <textarea
+              rows={3}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write update or feedback..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                disabled={commentSaving}
+                onClick={handleAddComment}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {commentSaving ? "Posting..." : "Post Comment"}
+              </button>
+            </div>
+          </div>
         </section>
       )}
     </div>

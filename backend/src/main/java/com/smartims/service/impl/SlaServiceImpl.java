@@ -139,55 +139,42 @@ public class SlaServiceImpl implements SlaService {
     public void checkAndMarkBreach(Issue issue) {
 
         if (issue == null ||
-                issue.getCreatedAt() == null ||
-                issue.getPriorityLevel() == null ||
+                issue.getSlaStartTime() == null ||
+                issue.getSlaDueTime() == null ||
                 issue.isSlaBreached() ||
-                issue.getStatus() == IssueStatus.CLOSED) {
+                issue.getStatus() == IssueStatus.CLOSED ||
+                issue.getStatus() == IssueStatus.RESOLVED) {
             return;
         }
 
-        slaPolicyRepository
-                .findByProjectIdAndPriorityLevel(
-                        issue.getProject().getId(),
-                        issue.getPriorityLevel()
-                )
-                .ifPresent(policy -> {
+        if (LocalDateTime.now().isAfter(issue.getSlaDueTime())) {
+            issue.setSlaBreached(true);
 
-                    long elapsedMinutes = Duration.between(
-                            issue.getCreatedAt(),
-                            LocalDateTime.now()
-                    ).toMinutes();
+            escalateIfNeeded(issue, "BREACHED");
 
-                    if (elapsedMinutes > policy.getResolutionTimeMinutes()) {
+            notificationInboxService.notifyForIssueEvent(
+                    "SLA_BREACHED",
+                    "SLA breached for issue: " + issue.getTitle(),
+                    issue
+            );
 
-                        issue.setSlaBreached(true);
+            auditLogService.logSystem(
+                    "SLA_ESCALATED",
+                    "Issue " + issue.getId() + " escalated due to SLA breach",
+                    issue.getId(),
+                    "ISSUE"
+            );
 
-                        escalateIfNeeded(issue, "BREACHED");
-
-                        notificationInboxService.notifyForIssueEvent(
-                                "SLA_BREACHED",
-                                "SLA breached for issue: " + issue.getTitle(),
-                                issue
-                        );
-
-                        auditLogService.logSystem(
-                                "SLA_ESCALATED",
-                                "Issue " + issue.getId() + " escalated due to SLA breach",
-                                issue.getId(),
-                                "ISSUE"
-                        );
-
-                        auditLogService.log(
-                                "SLA_BREACHED",
-                                "ISSUE",
-                                issue.getId(),
-                                "SLA breached for priority "
-                                        + issue.getPriorityLevel()
-                                        + " in project "
-                                        + issue.getProject().getName()
-                        );
-                    }
-                });
+            auditLogService.log(
+                    "SLA_BREACHED",
+                    "ISSUE",
+                    issue.getId(),
+                    "SLA breached for priority "
+                            + issue.getPriorityLevel()
+                            + " in project "
+                            + issue.getProject().getName()
+            );
+        }
     }
 
     @Override
@@ -199,24 +186,34 @@ public class SlaServiceImpl implements SlaService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = issue.getSlaStartTime();
         LocalDateTime due = issue.getSlaDueTime();
+        LocalDateTime resolvedAt = issue.getResolvedAt();
 
         if (start == null || due == null) {
             throw new RuntimeException("SLA not initialized for this issue");
         }
 
         long totalMinutes = Duration.between(start, due).toMinutes();
-        long remainingMinutes = Duration.between(now, due).toMinutes();
+        boolean issueCompleted = issue.getStatus() == IssueStatus.RESOLVED || issue.getStatus() == IssueStatus.CLOSED;
+        LocalDateTime evaluationTime = issueCompleted && resolvedAt != null ? resolvedAt : now;
+        long remainingMinutes = Duration.between(evaluationTime, due).toMinutes();
 
         String status;
 
-        if (now.isAfter(due)) {
+        if (issueCompleted && resolvedAt != null) {
+            if (resolvedAt.isAfter(due)) {
+                status = "BREACHED";
+                remainingMinutes = 0;
+                escalateIfNeeded(issue, status);
+            } else {
+                status = "RESOLVED_IN_SLA";
+                remainingMinutes = Math.max(0, remainingMinutes);
+            }
+        } else if (evaluationTime.isAfter(due)) {
             status = "BREACHED";
             remainingMinutes = 0;
-
             escalateIfNeeded(issue, status);
         } else if (remainingMinutes <= totalMinutes * 0.2) {
             status = "AT_RISK";
-
             escalateIfNeeded(issue, status);
         } else {
             status = "ON_TRACK";

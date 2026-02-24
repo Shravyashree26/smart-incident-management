@@ -7,6 +7,8 @@ import com.smartims.service.IssueCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/issues/{issueId}/comments")
 @RequiredArgsConstructor
@@ -31,11 +33,11 @@ public class IssueCommentController {
 
     // Get comments
     @GetMapping
-    public ApiResponse<IssueCommentResponse> getComments(
-            @PathVariable Long issueId,@RequestBody IssueCommentRequest request) {
+    public ApiResponse<List<IssueCommentResponse>> getComments(
+            @PathVariable Long issueId) {
 
-        IssueCommentResponse response =
-                commentService.addComment(issueId, request.getComment());
+        List<IssueCommentResponse> response =
+                commentService.getComments(issueId);
 
         return  ApiResponse.success(
                 "Issue comments fetched successfully",

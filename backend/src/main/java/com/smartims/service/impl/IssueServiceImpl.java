@@ -160,7 +160,11 @@ public class IssueServiceImpl implements IssueService {
                 if ((oldStatus == IssueStatus.OPEN && newStatus == IssueStatus.IN_PROGRESS)
                         || (oldStatus == IssueStatus.IN_PROGRESS && newStatus == IssueStatus.RESOLVED)) {
                     if (oldStatus == IssueStatus.OPEN && newStatus == IssueStatus.IN_PROGRESS) {
-                        initializeSlaWindowIfNeeded(issue);
+                        initializeSlaWindow(issue);
+                        issue.setResolvedAt(null);
+                    }
+                    if (oldStatus == IssueStatus.IN_PROGRESS && newStatus == IssueStatus.RESOLVED) {
+                        issue.setResolvedAt(LocalDateTime.now());
                     }
                     issue.setStatus(newStatus);
                 } else {
@@ -168,10 +172,18 @@ public class IssueServiceImpl implements IssueService {
                 }
             }
             case "ROLE_MANAGER" -> {
-                if (oldStatus == IssueStatus.RESOLVED && newStatus == IssueStatus.CLOSED) {
+                if (oldStatus == IssueStatus.RESOLVED
+                        && (newStatus == IssueStatus.CLOSED || newStatus == IssueStatus.OPEN)) {
+                    if (newStatus == IssueStatus.OPEN) {
+                        // Reopened by manager; next engineer start should initialize a fresh SLA window.
+                        issue.setResolvedAt(null);
+                        issue.setSlaStartTime(null);
+                        issue.setSlaDueTime(null);
+                        issue.setEscalated(false);
+                    }
                     issue.setStatus(newStatus);
                 } else {
-                    throw new UnauthorizedException("MANAGER can only close issues");
+                    throw new UnauthorizedException("MANAGER can only move RESOLVED issues to CLOSED or OPEN");
                 }
             }
             case "ROLE_ADMIN" -> issue.setStatus(newStatus);
@@ -665,6 +677,7 @@ public class IssueServiceImpl implements IssueService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = issue.getSlaStartTime();
         LocalDateTime due = issue.getSlaDueTime();
+        LocalDateTime resolvedAt = issue.getResolvedAt();
 
         if (start == null || due == null) {
             return SlaStatusResponse.builder()
@@ -676,14 +689,25 @@ public class IssueServiceImpl implements IssueService {
         }
 
         long totalMinutes = Duration.between(start, due).toMinutes();
-        long remainingMinutes = Duration.between(now, due).toMinutes();
+        boolean issueCompleted = issue.getStatus() == IssueStatus.RESOLVED || issue.getStatus() == IssueStatus.CLOSED;
+        LocalDateTime evaluationTime = issueCompleted && resolvedAt != null ? resolvedAt : now;
+        long remainingMinutes = Duration.between(evaluationTime, due).toMinutes();
 
         String status;
 
-        if (now.isAfter(due)) {
+        if (issueCompleted && resolvedAt != null) {
+            if (resolvedAt.isAfter(due)) {
+                status = "BREACHED";
+                remainingMinutes = 0;
+                recordSlaBreachIfNeeded(issue, due, resolvedAt);
+            } else {
+                status = "RESOLVED_IN_SLA";
+                remainingMinutes = Math.max(0, remainingMinutes);
+            }
+        } else if (evaluationTime.isAfter(due)) {
             status = "BREACHED";
             remainingMinutes = 0;
-            recordSlaBreachIfNeeded(issue, due, now);
+            recordSlaBreachIfNeeded(issue, due, evaluationTime);
         } else if (remainingMinutes <= totalMinutes * 0.2) {
             status = "AT_RISK";
         } else {
@@ -698,10 +722,7 @@ public class IssueServiceImpl implements IssueService {
                 .build();
     }
 
-    private void initializeSlaWindowIfNeeded(Issue issue) {
-        if (issue.getSlaStartTime() != null && issue.getSlaDueTime() != null) {
-            return;
-        }
+    private void initializeSlaWindow(Issue issue) {
         LocalDateTime now = LocalDateTime.now();
         long resolutionMinutes = 60L;
         String priority = issue.getPriorityLevel();
@@ -713,6 +734,7 @@ public class IssueServiceImpl implements IssueService {
         }
         issue.setSlaStartTime(now);
         issue.setSlaDueTime(now.plusMinutes(Math.max(1L, resolutionMinutes)));
+        issue.setEscalated(false);
     }
 
     private User getCurrentUser() {

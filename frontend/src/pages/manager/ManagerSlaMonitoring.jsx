@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, RefreshCcw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, RefreshCcw, XCircle } from "lucide-react";
 import { getAllIssues, getIssueSlaStatus } from "../../api/issuesApi";
 import { getAllProjects } from "../../api/projectApi";
 import { getAllSlaPolicies } from "../../api/slaApi";
@@ -37,9 +37,19 @@ function formatStatus(status) {
 function statusPillClasses(status) {
   const normalized = String(status || "").toUpperCase();
   if (normalized === "BREACHED") return "bg-red-50 text-red-700 border-red-200";
+  if (normalized === "RESOLVED_IN_SLA") return "bg-emerald-50 text-emerald-700 border-emerald-200";
   if (normalized === "AT_RISK") return "bg-amber-50 text-amber-700 border-amber-200";
   if (normalized === "ON_TRACK") return "bg-emerald-50 text-emerald-700 border-emerald-200";
   return "bg-gray-50 text-gray-700 border-gray-200";
+}
+
+function priorityPillClasses(priority) {
+  const normalized = String(priority || "").toUpperCase();
+  if (normalized === "CRITICAL") return "bg-red-500 text-white";
+  if (normalized === "HIGH") return "bg-amber-500 text-white";
+  if (normalized === "MEDIUM") return "bg-blue-500 text-white";
+  if (normalized === "LOW") return "bg-gray-200 text-gray-700";
+  return "bg-gray-100 text-gray-600";
 }
 
 function minutesToText(minutes) {
@@ -59,6 +69,10 @@ function minutesToText(minutes) {
 }
 
 function getRemainingMinutes(row) {
+  const normalizedStatus = String(row?.slaStatus || "").toUpperCase();
+  if (normalizedStatus === "RESOLVED_IN_SLA" || normalizedStatus === "BREACHED") {
+    return row?.remainingMinutes ?? null;
+  }
   if (row?.slaDueTime) {
     const due = new Date(row.slaDueTime);
     if (!Number.isNaN(due.getTime())) {
@@ -83,6 +97,8 @@ function SummaryCard({ tone, label, value, icon: Icon }) {
       ? { border: "border-red-200", accent: "border-l-4 border-l-red-500", icon: "bg-red-100 text-red-600" }
       : tone === "amber"
         ? { border: "border-amber-200", accent: "border-l-4 border-l-amber-500", icon: "bg-amber-100 text-amber-600" }
+        : tone === "blue"
+          ? { border: "border-blue-200", accent: "border-l-4 border-l-blue-500", icon: "bg-blue-100 text-blue-600" }
         : { border: "border-emerald-200", accent: "border-l-4 border-l-emerald-500", icon: "bg-emerald-100 text-emerald-600" };
 
   return (
@@ -240,7 +256,12 @@ export default function ManagerSlaMonitoring() {
 
   const breachedCount = filteredRows.filter((row) => String(row.slaStatus).toUpperCase() === "BREACHED").length;
   const atRiskCount = filteredRows.filter((row) => String(row.slaStatus).toUpperCase() === "AT_RISK").length;
-  const onTrackCount = filteredRows.filter((row) => String(row.slaStatus).toUpperCase() === "ON_TRACK").length;
+  const withinSlaCount = filteredRows.filter((row) =>
+    String(row.slaStatus).toUpperCase() === "ON_TRACK" && String(row.status || "").toUpperCase() === "IN_PROGRESS"
+  ).length;
+  const solvedWithinSlaCount = filteredRows.filter((row) =>
+    String(row.slaStatus).toUpperCase() === "RESOLVED_IN_SLA"
+  ).length;
 
   return (
     <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-6">
@@ -262,10 +283,11 @@ export default function ManagerSlaMonitoring() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <SummaryCard tone="red" label="SLA Breached" value={breachedCount} icon={XCircle} />
         <SummaryCard tone="amber" label="Near Breach" value={atRiskCount} icon={AlertTriangle} />
-        <SummaryCard tone="green" label="Within SLA" value={onTrackCount} icon={CheckCircle2} />
+        <SummaryCard tone="blue" label="Within SLA" value={withinSlaCount} icon={Clock3} />
+        <SummaryCard tone="green" label="Solved Within SLA" value={solvedWithinSlaCount} icon={CheckCircle2} />
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white">
@@ -339,6 +361,7 @@ export default function ManagerSlaMonitoring() {
             <option value="ON_TRACK">On Track</option>
             <option value="AT_RISK">At Risk</option>
             <option value="BREACHED">Breached</option>
+            <option value="RESOLVED_IN_SLA">Resolved In SLA</option>
             <option value="NOT_STARTED">Not Started</option>
             <option value="UNKNOWN">Unavailable</option>
           </select>
@@ -406,7 +429,15 @@ export default function ManagerSlaMonitoring() {
                           {formatStatus(row.slaStatus)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatStatus(row.severity)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${priorityPillClasses(
+                            row.severity
+                          )}`}
+                        >
+                          {formatStatus(row.severity)}
+                        </span>
+                      </td>
                       <td className={`px-4 py-3 text-sm font-semibold ${timerClass}`}>{minutesToText(remaining)}</td>
                       <td className={`px-4 py-3 text-sm font-medium ${escalationClass}`}>{escalationText}</td>
                     </tr>
