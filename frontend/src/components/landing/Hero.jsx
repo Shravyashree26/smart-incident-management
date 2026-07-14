@@ -21,19 +21,24 @@ export default function LandingPage() {
           Track issues, enforce SLAs, and resolve incidents faster.
         </p>
 
-        <div className="mt-8 flex justify-center gap-4">
-          <Link
-            to="/login"
-            className="px-8 py-3 rounded-lg border border-blue-600 text-blue-600 font-medium hover:bg-blue-600 hover:text-white transition"
-          >
-            Login
-          </Link>
+	<div className="mt-8 flex justify-center gap-4">
+ 	  <Link
+   	     to="/login"
+    	     className="px-8 py-3 rounded-lg border border-blue-600 text-blue-600 font-medium hover:bg-blue-600 hover:text-white transition"
+  	  >
+    	     Login
+ 	  </Link>
 
-          <a href="#contact" className="px-8 py-3 rounded-lg border border-blue-600 text-blue-600 font-medium hover:bg-blue-600 hover:text-white transition">Get Started</a>
-          
-        </div>
+ 	  <Link
+   	     to="/register"
+   	     className="px-8 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+  	  >
+    	     Register
+  	   </Link>
+	 </div>
       </div>
       </section>
     </div>
   );
 }
+
