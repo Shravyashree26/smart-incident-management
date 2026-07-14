@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const API_ORIGIN = String(
-  import.meta.env.VITE_API_URL || "http://localhost:8080"
+  import.meta.env.VITE_API_URL || "http://localhost:8081"
 ).replace(/\/$/, "");
 
 const api = axios.create({

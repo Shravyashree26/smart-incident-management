@@ -52,7 +52,7 @@ logging:
     com.smartims: DEBUG
 
 server:
-  port: ${PORT:8080}
+  port: ${PORT:8081}
 
 app:
   mail:
