@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: smartims-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smart_ims
+      POSTGRES_USER: postgre
+      POSTGRES_PASSWORD: shravya26
+    volumes:
+      - smartims-postgres-data:/var/lib/postgresql/data
+    networks:
+      - smartims-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartims_user -d smart_ims"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: smartims-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/smart_ims
+      DB_USERNAME: postgre
+      DB_PASSWORD: shravya26
+      JWT_SECRET: SmartIncidentManagementJwtSecretKeyMustBeAtLeast32CharactersLong2026
+      JWT_EXPIRATION: 3600000
+      FRONTEND_LOGIN_URL: http://13.204.88.23:8081/login
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartims-network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://13.204.88.23:8081
+    container_name: smartims-frontend
+    restart: unless-stopped
+    ports:
+      - "5178:80"
+    depends_on:
+      - backend
+    networks:
+      - smartims-network
+
+volumes:
+  smartims-postgres-data:
+
+networks:
+  smartims-network:
+    driver: bridge
