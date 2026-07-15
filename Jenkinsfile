@@ -2,6 +2,7 @@ pipeline {
 
     agent any
 
+
     environment {
 
         DOCKER_REGISTRY = 'shravyagowda'
@@ -68,17 +69,32 @@ pipeline {
                     withSonarQubeEnv('SonarQube') {
 
 
-                        sh '''
+                        withCredentials([
+
+                            string(
+                                credentialsId: 'sonarqube-token',
+                                variable: 'SONAR_TOKEN'
+                            )
+
+                        ]) {
+
+
+                            sh '''
 
                             chmod +x mvnw
 
 
                             ./mvnw clean verify sonar:sonar \
+                            -Dsonar.projectKey=Smart-Incident-Management \
+                            -Dsonar.projectName=Smart-Incident-Management \
+                            -Dsonar.host.url=$SONAR_HOST_URL \
+                            -Dsonar.login=$SONAR_TOKEN \
+                            -Dsonar.java.binaries=target/classes
 
-                            -Dsonar.projectKey=Smart-Incident-Management
 
+                            '''
 
-                        '''
+                        }
 
                     }
 
@@ -91,13 +107,13 @@ pipeline {
 
 
 
+
         stage('Quality Gate') {
 
             steps {
 
 
                 echo "Checking SonarQube Quality Gate"
-
 
 
                 timeout(time: 10, unit: 'MINUTES') {
@@ -117,9 +133,12 @@ pipeline {
 
 
 
+
         stage('Frontend Build') {
 
+
             steps {
+
 
                 sh '''
 
@@ -145,18 +164,17 @@ pipeline {
 
         stage('Backend Docker Build') {
 
+
             steps {
 
 
                 sh '''
 
                     docker build \
-
                     -t ${BACKEND_IMAGE}:${IMAGE_TAG} \
-
                     -t ${BACKEND_IMAGE}:latest \
-
                     backend
+
 
                 '''
 
@@ -169,7 +187,10 @@ pipeline {
 
 
 
+
+
         stage('Frontend Docker Build') {
+
 
             steps {
 
@@ -177,13 +198,9 @@ pipeline {
                 sh '''
 
                     docker build \
-
                     --build-arg VITE_API_URL=${VITE_API_URL} \
-
                     -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
-
                     -t ${FRONTEND_IMAGE}:latest \
-
                     frontend
 
 
@@ -198,7 +215,11 @@ pipeline {
 
 
 
+
+
+
         stage('Docker Push') {
+
 
             steps {
 
@@ -222,35 +243,36 @@ pipeline {
 
                     sh '''
 
-                        echo "$DOCKER_PASSWORD" | docker login \
-
-                        -u "$DOCKER_USERNAME" \
-
-                        --password-stdin
+                    echo "$DOCKER_PASSWORD" | docker login \
+                    -u "$DOCKER_USERNAME" \
+                    --password-stdin
 
 
 
-                        docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
+                    docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
 
 
-                        docker push ${BACKEND_IMAGE}:latest
+                    docker push ${BACKEND_IMAGE}:latest
 
 
 
-                        docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
+                    docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
 
 
-                        docker push ${FRONTEND_IMAGE}:latest
+                    docker push ${FRONTEND_IMAGE}:latest
+
+
 
                     '''
 
-
                 }
-
 
             }
 
         }
+
+
+
 
 
 
@@ -264,7 +286,6 @@ pipeline {
 
 
                 sh '''
-
 
                     echo "Stopping old containers"
 
@@ -337,6 +358,7 @@ pipeline {
 
 
 
+
         success {
 
 
@@ -344,6 +366,7 @@ pipeline {
 
 
         }
+
 
 
 
