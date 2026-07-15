@@ -41,7 +41,6 @@ pipeline {
 
                     chmod +x backend/mvnw
 
-
                     ./backend/mvnw \
                     -f backend/pom.xml \
                     clean package \
@@ -52,7 +51,6 @@ pipeline {
             }
 
         }
-
 
 
 
@@ -88,8 +86,9 @@ pipeline {
                             -Dsonar.projectKey=Smart-Incident-Management \
                             -Dsonar.projectName=Smart-Incident-Management \
                             -Dsonar.host.url=$SONAR_HOST_URL \
-                            -Dsonar.login=$SONAR_TOKEN \
-                            -Dsonar.java.binaries=target/classes
+                            -Dsonar.token=$SONAR_TOKEN \
+                            -Dsonar.java.binaries=target/classes \
+                            -Dsonar.qualitygate.wait=false
 
 
                             '''
@@ -116,19 +115,17 @@ pipeline {
                 echo "Checking SonarQube Quality Gate"
 
 
-                timeout(time: 10, unit: 'MINUTES') {
+                timeout(time:30, unit:'MINUTES') {
 
 
-                    waitForQualityGate abortPipeline: true
+                    waitForQualityGate abortPipeline:true
 
 
                 }
 
-
             }
 
         }
-
 
 
 
@@ -144,12 +141,9 @@ pipeline {
 
                     cd frontend
 
-
                     npm ci
 
-
                     npm run build
-
 
                 '''
 
@@ -188,7 +182,6 @@ pipeline {
 
 
 
-
         stage('Frontend Docker Build') {
 
 
@@ -216,8 +209,6 @@ pipeline {
 
 
 
-
-
         stage('Docker Push') {
 
 
@@ -229,11 +220,11 @@ pipeline {
 
                     usernamePassword(
 
-                        credentialsId: 'dockerhub-credentials',
+                        credentialsId:'dockerhub-credentials',
 
-                        usernameVariable: 'DOCKER_USERNAME',
+                        usernameVariable:'DOCKER_USERNAME',
 
-                        passwordVariable: 'DOCKER_PASSWORD'
+                        passwordVariable:'DOCKER_PASSWORD'
 
                     )
 
@@ -248,19 +239,14 @@ pipeline {
                     --password-stdin
 
 
-
                     docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
-
 
                     docker push ${BACKEND_IMAGE}:latest
 
 
-
                     docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
 
-
                     docker push ${FRONTEND_IMAGE}:latest
-
 
 
                     '''
@@ -270,7 +256,6 @@ pipeline {
             }
 
         }
-
 
 
 
@@ -366,6 +351,7 @@ pipeline {
 
 
         }
+
 
 
 
