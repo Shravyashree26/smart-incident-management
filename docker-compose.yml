@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16
-    container_name: smartims-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: smart_ims
@@ -20,7 +19,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: smartims-backend
     restart: unless-stopped
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/smart_ims
@@ -42,7 +40,6 @@ services:
       context: ./frontend
       args:
         VITE_API_URL: http://13.204.88.23:8081
-    container_name: smartims-frontend
     restart: unless-stopped
     ports:
       - "5178:80"
