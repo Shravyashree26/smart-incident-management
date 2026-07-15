@@ -22,7 +22,6 @@ services:
       retries: 10
 
 
-
   backend:
 
     image: shravyagowda/smart-incident-management-backend:latest
@@ -32,32 +31,23 @@ services:
     environment:
 
       DB_URL: jdbc:postgresql://postgres:5432/smart_ims
-
       DB_USERNAME: postgre
-
       DB_PASSWORD: shravya26
 
       JWT_SECRET: SmartIncidentManagementJwtSecretKeyMustBeAtLeast32CharactersLong2026
-
       JWT_EXPIRATION: 3600000
 
       FRONTEND_LOGIN_URL: http://13.204.88.23:5178/login
 
-
     ports:
       - "8081:8081"
 
-
     depends_on:
-
       postgres:
         condition: service_healthy
 
-
     networks:
       - smartims-network
-
-
 
 
 
@@ -65,30 +55,68 @@ services:
 
     image: shravyagowda/smart-incident-management-frontend:latest
 
+    restart: unless-stopped
+
+    ports:
+      - "5178:80"
+
+    depends_on:
+      - backend
+
+    networks:
+      - smartims-network
+
+
+
+  prometheus:
+
+    image: prom/prometheus:latest
+
+    container_name: smartims-prometheus
 
     restart: unless-stopped
 
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
     ports:
+      - "9092:9090"
 
-      - "5178:80"
-
+    networks:
+      - smartims-network
 
     depends_on:
-
       - backend
 
 
-    networks:
 
+  grafana:
+
+    image: grafana/grafana:latest
+
+    container_name: smartims-grafana
+
+    restart: unless-stopped
+
+    ports:
+      - "3002:3000"
+
+    volumes:
+      - smartims-grafana-data:/var/lib/grafana
+
+    networks:
       - smartims-network
 
+    depends_on:
+      - prometheus
 
 
 
 volumes:
 
   smartims-postgres-data:
+
+  smartims-grafana-data:
 
 
 
